@@ -32,46 +32,48 @@ char*       pathBuff[PATH_CHARS];
 
 
 void setup() {
-  if (!initScreen(ADAFRUIT_1947, ADA_1947_SHIELD_CS, PORTRAIT)) { // If we can't get the screen running..
-    Serial.println("NO SCREEN!");                               // Send an error out the serial port.
-    Serial.flush();                                             // Make sure it goes out!
-    while (true);                                               // Lock processor here forever.
-  }
-  screen->fillScreen(&blue);                                    // Looks like we have a screen, fill it with ??.
 
-  if (!SD.begin(SD_CS)) {             // If we can not initialze a SD drive.
-    Serial.println("No SD Drive!");  // Tell the user.
-    while (1);                       // Just stop here.
-  }
-  ourParser.addCmd(printWD, "pwd");   // Add pwd command  [ If they type "pwd" they mean printWD ]
-  ourParser.addCmd(changeDir, "cd");  // Add cd command
-  ourParser.addCmd(listDir, "ls");    // Add ls command
-  ourParser.addCmd(makeDir, "mkdr");  // Add mkdr command
-  ourParser.addCmd(makeDir, "mkdir"); // We'll take it either way.
-  ourParser.addCmd(deleteFile, "rm"); // We'll take it either way.
+	Serial.begin(9600);
+	if (!initScreen(ADAFRUIT_1947, ADA_1947_SHIELD_CS, PORTRAIT)) { // If we can't get the screen running..
+		Serial.println("NO SCREEN!");                               // Send an error out the serial port.
+		Serial.flush();                                             // Make sure it goes out!
+		while (true);                                               // Lock processor here forever.
+	}
+	screen->fillScreen(&blue);                                    // Looks like we have a screen, fill it with ??.
+
+	if (!SD.begin(SD_CS)) {             // If we can not initialze a SD drive.
+		Serial.println("No SD Drive!");  // Tell the user.
+		while (1);                       // Just stop here.
+	}
+	ourParser.addCmd(printWD, "pwd");   // Add pwd command  [ If they type "pwd" they mean printWD ]
+	ourParser.addCmd(changeDir, "cd");  // Add cd command
+	ourParser.addCmd(listDir, "ls");    // Add ls command
+	ourParser.addCmd(makeDir, "mkdr");  // Add mkdr command
+	ourParser.addCmd(makeDir, "mkdir"); // We'll take it either way.
+	ourParser.addCmd(deleteFile, "rm"); // We'll take it either way.
 }
 
 
 // Your loop where it parses out all your typings.
 void loop(void) {
+	
+	char  inChar;
+	int   command;
 
-  char  inChar;
-  int   command;
-
-  if (Serial.available()) {                                         // If serial has some data..
-    inChar = Serial.read();                                        // Read out a charactor.
-    Serial.print(inChar);                                          // If using development machine, echo the charactor.
-    command = ourParser.addChar(inChar);                           // Try parsing what we have.
-    switch (command) {                                             // Check the results.
-      case noCommand    : break;                                  // Nothing to report, move along.
-      case printWD      : Serial.println(wd.getPath());  break;   // Easy peasy! Just print wd out.
-      case listDir      : listDirectory();               break;   // Print out a listing of the working directory.
-      case makeDir      : makeDirectory();               break;   // See if we can create a directory in the working directory.
-      case changeDir    : changeDirectory();             break;   // Try changing directorys.
-      case deleteFile   : deleteItem();                  break;   // Delete a directory or file.
-      default           : Serial.println("What?");       break;   // No idea. Try again?
-    }
-  }
+	if (Serial.available()) {                                         // If serial has some data..
+		inChar = Serial.read();                                        // Read out a charactor.
+		Serial.print(inChar);                                          // If using development machine, echo the charactor.
+		command = ourParser.addChar(inChar);                           // Try parsing what we have.
+		switch (command) {                                             // Check the results.
+			case noCommand    : break;                                  // Nothing to report, move along.
+			case printWD      : Serial.println(wd.getPath());  break;   // Easy peasy! Just print wd out.
+			case listDir      : listDirectory();               break;   // Print out a listing of the working directory.
+			case makeDir      : makeDirectory();               break;   // See if we can create a directory in the working directory.
+			case changeDir    : changeDirectory();             break;   // Try changing directorys.
+			case deleteFile   : deleteItem();                  break;   // Delete a directory or file.
+			default           : Serial.println("What?");       break;   // No idea. Try again?
+		}
+	}
 }
 
 
@@ -90,36 +92,37 @@ void loop(void) {
 // [ls] Lists all the files in the working direcotory.
 void listDirectory(void) {
 
-  dirList  aDirectory;
-  dirItem* anItem;
-  int      index;
-  int      field;
-  int      numChars;
+	dirList  aDirectory;
+	dirItem* anItem;
+	int      index;
+	int      field;
+	int      numChars;
 
-  field = 15;
-  aDirectory.readDir(wd.getPath());
-  if (aDirectory.getCount()) {
-    index = 0;
-    anItem = aDirectory.findItem(index++);
-    while (anItem) {
-      Serial.print(anItem->getName());
-      if (anItem->getIsDir()) {
-        Serial.println("/");
-      } else {
-        numChars = strlen(anItem->getName());
-        for (int i = 0; i < field - numChars; i++) {
-          Serial.print(" ");
-        }
-        Serial.println(anItem->getSize());
-      }
-      anItem = aDirectory.findItem(index++);
-    }
-  }
-  aDirectory.dumpList();
+	field = 15;
+	aDirectory.readDir(wd.getPath());
+	if (aDirectory.getCount()) {
+		index = 0;
+		anItem = aDirectory.findItem(index++);
+		while (anItem) {
+			Serial.print(anItem->getName());
+			if (anItem->getIsDir()) {
+				Serial.println("/");
+			} else {
+				numChars = strlen(anItem->getName());
+				for (int i = 0; i < field - numChars; i++) {
+			 		Serial.print(" ");
+				}
+				Serial.println(anItem->getSize());
+			}
+			anItem = aDirectory.findItem(index++);
+		}
+	}
+	aDirectory.dumpList();
 }
 
 
 // [mkdir] Create a new directory in the working directory using typed in parameter.
+// THIS ONE IS MESSED UP!
 void makeDirectory(void) {
 
   char*    charBuff;
@@ -214,6 +217,7 @@ void changeDirectory(void) {
 
 
 //[rm] Delete a file or directory..
+// NOT EVEN WRITTEN!
 void deleteItem(void) {
 
   char* charBuff;
