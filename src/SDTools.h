@@ -51,9 +51,14 @@ bool write32(uint32_t val, File f);
 
 
 
+// ***************************************************
+//          End of the big/little indian thing.
+// ***************************************************
+
 
 // Returns true if this folderPath can be found, or created.
 bool createFolder(const char* folderPath);
+
 
 // Given a path, baseName and extension this hands back a string with a path to an unused
 // numbered file. For example "/docs/NoName5.doc". IF it can not allocated this file it
@@ -80,5 +85,7 @@ void fcat(File dest,File src);
 
 // Pass in your extension and a file path. returns if the file extension matches.
 bool extensionMatch(const char* extension,const char* filePath);
+
+
 
 #endif

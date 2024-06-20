@@ -325,8 +325,9 @@ bool filePath::setPath(const char* inPath) {
 	}																	//
 	if (fail) {														// If we were NOT successful..
 		reset();														// Clear out and reset everything.
-	}																	//
-	refreshChildList();											// You need this for a success. Won't hurt on fail.
+	} else {															//
+		refreshChildList();										// You need this for a success.
+	}
 	return !fail;													// In any case we return our result.
 }
 
@@ -387,7 +388,7 @@ void filePath::dumpChildList(void) {
 
 
 // We need to refresh the current child list. Dump what we have and fill it with what we
-// got.
+// got. What we're saying is : If you are a folder, refresh your list of items you hold.
 void filePath::refreshChildList(void) {
 
 	tempStr		ourPath;
@@ -395,7 +396,6 @@ void filePath::refreshChildList(void) {
 	File			entry;
 	pathItem*	newItem;
 	bool			done;
-	//bool			error;
 	
 	dumpChildList();																		// Clear out the child list.
 	ourPath.setStr(getPath());															// Save off a copy of our current path.

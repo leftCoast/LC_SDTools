@@ -6,14 +6,12 @@
 */
 
 #include <SD.h>
-#include <Adafruit_GFX.h>
-#include <adafruit_1947_Obj.h>
+#include <adafruit_1947.h>
 #include <lilParser.h>
-#include <screen.h>
-#include <resizeBuff.h>
-#include "src/SDTools.h"
+#include <SDTools.h>
 
 
+#define DSP_CS      10		// We need to fire up the display because it's on the SPI bus.
 #define SD_CS        4     // SD chip select pin number. Change to suit your setup.
 #define PATH_CHARS   255   // Could be less, depending on how deep into the SD drive you look.
 
@@ -34,10 +32,11 @@ char*       pathBuff[PATH_CHARS];
 void setup() {
 
 	Serial.begin(9600);
-	if (!initScreen(ADAFRUIT_1947, ADA_1947_SHIELD_CS, PORTRAIT)) { // If we can't get the screen running..
-		Serial.println("NO SCREEN!");                               // Send an error out the serial port.
-		Serial.flush();                                             // Make sure it goes out!
-		while (true);                                               // Lock processor here forever.
+	screen = (displayObj*)new adafruit_1947(DSP_CS,-1);
+	if (screen) { 															// If we can't get the screen running..
+		Serial.println("NO SCREEN!");                         // Send an error out the serial port.
+		Serial.flush();                                       // Make sure it goes out!
+		while (true);                                         // Lock processor here forever.
 	}
 	screen->fillScreen(&blue);                                    // Looks like we have a screen, fill it with ??.
 
@@ -142,33 +141,31 @@ void makeDirectory(void) {
       success = false;                          // Not a success yet.
       done = false;                             // And we are not done yet.
       do {                                      // Start looping.
-            itemName = getPathItemName(index);     // Grab an item name from the list.
-            if (itemName) {                        // If we got one..
-                  if (seenFile) {                     // If we've already seen a file..
-                     done = true;                     // This is a fail. Time to bail.
-                  } else {                            // Else, We've not seen a file yet. Keep looking.
-                     strcat(pathBuff, "/");           // Start with a slash
-                     strcat(pathBuff, itemName);      // Add in the name.
-                     if (!SD.exists(pathBuff)) {      // If this path does not exist..
-                        SD.mkdir(pathBuff);           // Have a go at creating it.
-                        if (!SD.exists(pathBuff)) {   // Still does not exist..
-                           done = true;                  // This is a fail. Time to bail.
-                        }
-                     } else {                            // Else, the items exists..
-                        item = SD.open(pathBuff);        // Open the item.
-                        if (!item.isDirectory()) {       // If the item is NOT a directory..
-                           seenFile = true;               // This is actually a file, not a directory.
-                        }
-                        item.close();
-                     }
-                  }
-        } else {                               // We've run out of items.
-          success = true;                     // This is the only successful end case.
-          done = true;                        // And we're done looping.
-        }
-      }
+			itemName = getPathItemName(index);     // Grab an item name from the list.
+			if (itemName) {                        // If we got one..
+				if (seenFile) {                     // If we've already seen a file..
+					done = true;                     // This is a fail. Time to bail.
+				} else {                            // Else, We've not seen a file yet. Keep looking.
+					strcat(pathBuff, "/");           // Start with a slash
+					strcat(pathBuff, itemName);      // Add in the name.
+					if (!SD.exists(pathBuff)) {      // If this path does not exist..
+						SD.mkdir(pathBuff);           // Have a go at creating it.
+						if (!SD.exists(pathBuff)) {   // Still does not exist..
+							done = true;                  // This is a fail. Time to bail.
+						}
+					} else {                            // Else, the items exists..
+						item = SD.open(pathBuff);        // Open the item.
+						if (!item.isDirectory()) {       // If the item is NOT a directory..
+							seenFile = true;               // This is actually a file, not a directory.
+						}
+						item.close();
+					}
+				}
+			} else {                               // We've run out of items.
+				success = true;                     // This is the only successful end case.
+				done = true;                        // And we're done looping.
+			}
     } while (!done);
-
     strcat(pathBuff, "/");                       // Add in the slash.
     strcat(pathBuff, charBuff);                  // Add in the user's parameter.
     free(charBuff);                              // Free the user's parameter.
