@@ -108,7 +108,10 @@ class filePath {
 	
 	virtual	void				reset(void);
 				int				numPathBytes(void);
-				pathItemType	checkPathPlus(const char* name);
+				pathItemType	getPathType(void);
+				char*				getPathName(void);
+				pathItemType	checkPathPlus(const char* inPath);
+				bool				addPath(const char* inPath);
 	virtual	bool				setPath(const char* inPath);
 	virtual	char*				getPath(void);
 				pathItem*		getCurrItem(void);
@@ -120,6 +123,7 @@ class filePath {
 				bool				pushChildItemByName(const char* name);
 	virtual	bool				pushItem(pathItem* theNewGuy);
 	virtual	void				popItem(void);
+				bool				clearDirectory(void);
 				bool				deleteCurrentItem(void);
 				
 				pathItem*	pathList;

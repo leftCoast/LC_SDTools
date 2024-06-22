@@ -202,9 +202,20 @@ int filePath::numPathBytes(void) {
  }
  
 
+// Paths point at things. Directories, files.. Root? This passes back what kind of thing
+// that this is a path to.
+pathItemType filePath::getPathType(void) { return getCurrItem()->getType(); }
+
+
+
+// Paths point at things. Directories, files.. Root? This passes back the name of what
+// this is a path to.
+char* filePath::getPathName(void) { return getCurrItem()->getName(); }
+
+	
 // Ok, kinda' a special here. -IF- we were to add this name to our current pathList.. What
 // do we end up with? A file? A folder? Nothing at all? Find out and return the answer.
-pathItemType filePath::checkPathPlus(const char* name) {
+pathItemType filePath::checkPathPlus(const char* inPath) {
 
 	File				testFile;
 	int				numBytes;
@@ -219,10 +230,10 @@ pathItemType filePath::checkPathPlus(const char* name) {
 		if (currentItem->getType()==fileType) {		// If the current itme is a file..
 			return theType;									// We bail!
 		}															// If we're here we have a current time and its not a file.
-		numBytes = numPathBytes() + strlen(name);		// Calc. the total number of bytes needed.
+		numBytes = numPathBytes() + strlen(inPath);	// Calc. the total number of bytes needed.
 		if (resizeBuff(numBytes,&testPath)) {			// If we can grab the memory for this path..
 			strcpy(testPath,getPath());					// Grab the path we have.
-			strcat(testPath,name);							// Add the name we got.
+			strcat(testPath,inPath);						// Add the inPath we got.
 			testFile = SD.open(testPath,FILE_READ);	// Try opening the constructed path.
 			if (testFile) {									// If this constructed path exists..
 				if (testFile.isDirectory()) {				// If the returned file is a directory..
@@ -239,12 +250,37 @@ pathItemType filePath::checkPathPlus(const char* name) {
 }
 
 
+// We'll try to add this path segment to our existing path. If it works out? This new path
+// will be our path. If not? No change.
+bool filePath::addPath(const char* inPath) {
+
+	tempStr	tempPath(inPath);
+	int		numBytes;
+	char*		pathBuff;
+	bool		success;
+	
+	success = false;													// Well, it ain't a success yet.
+	Serial.print("addPath adding ");
+	Serial.println(inPath);												
+	if (checkPathPlus(tempPath.getStr())) {					// If this checks out..
+		numBytes = numPathBytes() + tempPath.numChars();	// Calc. num bytes.
+		if (resizeBuff(numBytes,&pathBuff)) {					// If we can grab some RAM..
+			strcpy(pathBuff,getPath());							// Stuff in our path.
+			strcat(pathBuff,tempPath.getStr());					// Add the inPath text.
+			success = setPath(pathBuff);							// This better work, already checked.
+         resizeBuff(0,&pathBuff);								// Recycle the RAM.
+      }																	//
+   }																		//
+   return success;													// return our result.
+}
+
 
 // This is used for setting the initial path for browsing. Paths must start with '/'
 // because they all start at root. They Must also fit in 8.3 file names, because SD is
 // brain dead and we're stuck with it for now. If the path is NOT found on the SD card,
 // this fails and gives back a false. This does NOT fill out the childList. Only the
-// pathList
+// pathList. HA! Look at the botton of the code. There is a call to refreshChildList()
+// upon success. So it DOES fill out the child list.
 bool filePath::setPath(const char* inPath) {
 
 	rootItem*	theRoot;
@@ -285,6 +321,7 @@ bool filePath::setPath(const char* inPath) {
 						fail = true;								// We can't get the RAM, we fail!
 					}													//
 				break;												// Done adding a folder to our path.
+				case rootType	:									// Root is dealt with above. Should NEVER get to here.
 				case fileType	:									// Preceding a '/' must not be a file type.
 				case noType		:  fail = true;	break;	// And noType means the path did not exist.
 			}															//
@@ -319,6 +356,7 @@ bool filePath::setPath(const char* inPath) {
 						fail = true;								// We can't get the RAM, we fail!
 					}													//
 				break;												// Last file is complete.
+				case rootType	:	Serial.println("found root"); break;								// We started with root. Adding another is a fail.
 				case noType		:  fail = true;	break;	// And noType means the path did not exist. Its a fail.
 			}															//
 		}																//
@@ -327,7 +365,7 @@ bool filePath::setPath(const char* inPath) {
 		reset();														// Clear out and reset everything.
 	} else {															//
 		refreshChildList();										// You need this for a success.
-	}
+	}																	//
 	return !fail;													// In any case we return our result.
 }
 
@@ -353,7 +391,7 @@ char* filePath::getPath(void) {
 
 // Lets see what's at the end of the list we currently have. This will pass back a pointer
 // to it for you to have a peek at it. Maybe ask what kind of thing it is, possibly
-// what's it's name?
+// what's it's name? DON'T DELETE IT!
 pathItem* filePath::getCurrItem(void) {
 
 	if (pathList) {									// Sanity check, we have a list right?
@@ -404,7 +442,6 @@ void filePath::refreshChildList(void) {
 		if (dir) {																			// If our directory exists..
 			if (dir.isDirectory()) {													// If it is a directory..
 				dir.rewindDirectory();                 							// Rewind it to the first entry.
-				//error = false;
 				done = false;                          							// We ain't done yet.
 				do {                                   							// Start looping through the entries.
 					entry = dir.openNextFile();										// Grab an entry.
@@ -491,7 +528,7 @@ pathItem*  filePath::getChildItemByName(const char* name) {
 	
 // If one has a list of child items to choose from. This grabs the one with this passed
 // in name, copies it, then adds the copy to the end of the path list.	
-bool   filePath::pushChildItemByName(const char* name) {
+bool filePath::pushChildItemByName(const char* name) {
 	
 	tempStr		theName(name);
 	pathItem*	theChild;
@@ -562,49 +599,68 @@ void filePath::popItem(void) {
 			if (pathList==theLastGuy) {		// If the pathList is actually pointing to the last guy.. IE the root.
 				pathList = NULL;					// Set pathList to NULL. Because its going to be empty.
 			}											//
+			Serial.print("Deleting ");
+			Serial.println(theLastGuy->getName());
 			delete (theLastGuy);					// Delete this last node. Wich will unhook it if necessary.
 		}												//
 	}													//
 	refreshChildList();							// This will at least clean out the old list.
 }
-		
-			
-// NOTE : THIS NEEDS TO BE GONE THROUGH!! THEN THE CODE THAT CALLS IT NEEDS TO BE GONE
-// THROUGH. IT SHOULD LEAVE THE PATH MINUS THE LAST ITEM SO THE CALLING CODE CAN RESET TO
-// THIS PATH.
-// Scary recursive delete of the last item of a path. Be it a file or a folder.
-bool filePath::deleteCurrentItem(void) {
 
-	pathItem* trace;
+		
+// If we're pointed at a directory, this should clear it out. And yes, it can get
+// recursive.
+bool filePath::clearDirectory(void) {
+
+	pathItem*	trace;
 	
-	trace = getCurrItem();												// Ok, trace gets the last item on the list.
-	if (trace) {															// If we got an item..
-		if (trace->getType()==fileType) {							// If this item is a file..
-			if(SD.remove(getPath())) {									// If we can delete it..
-				popItem();													// We pop it off the end of the list.
-				return true;												// And we are done with a success!
-			} else {															// Else, didn't delete?
-				return false;												// No idea on what's wrong, just give up.
-			}																	// 
-		} else if (trace->getType()==folderType) {				// Else, it was NOT a file. If its a folder..
-			do {																// For each..
-				refreshChildList();										// Make sure we have a current child list.
-				if (childList) {											// If we have a child list..
-					pushChildItemByName(childList->getName());	// Push this child onto the current path.
-					if (!deleteCurrentItem()) {						// If we CAN'T delete it..
-						return false;										// We fail..
+	if(getPathType()==folderType||getPathType()==rootType) {	// Let's see what we're a path to..
+		refreshChildList();												// Make sure we have fresh kid list.
+		do {																	// For every.. something..
+			if (!numChildItems()) {										// We have no kids?
+				return true;												// Well that's a success!
+			} else {															// Oops, we got kids to clear out.
+				trace = childList;										// Grab a pointer to the first child.
+				if (pushChildItemByName(trace->getName())) {		// If we can become the path to that child..
+					if (!deleteCurrentItem()) {						// If we can't delete that child..
+						popItem();											// Back to our old self..
+						return false;										// We fail.
 					}															//
-				} else {														// If there is no child..				
-					if(SD.rmdir(getPath())) {							// If we can delete the folder..
-						popItem();											// We pop it off the end of the list.
-						return true;										// We return true!
-					}
+				} else {														// Can't do the push?
+					return false;											// Something broke, fail.
 				}																//
-			} while(childList);											// Pretty much we're saying "forever".
-		}																		//
-	} else {																	// Else, who knows what's going wrong..
-		return false;														// Just stop.
+			}																	//
+		}	while(true);													// We're going to rely on recursion.. 
+	} else {																	//
+		return true;														// Why? It's clear ain't it?
 	}																			//
-	return false;															// Kinda' fell through, return false..
+	return false;															// If we get here? Something bad happened.
+} 
+
+			
+// Delete what we are pointing at. This is going to get all recursive, so hold on tight.
+bool filePath::deleteCurrentItem(void) {
+	
+	bool success;
+	
+	success = false;
+	switch(getPathType()) {					// Let's see what we're a path to..
+		case noType		:						// No type? Not possible.
+		case rootType	: 						// Root?! Root can NOT be deleted. Fail!
+		break;									// These are fails. Lets go..
+		case fileType	:						// File type? This is good.
+			if (SD.remove(getPath())) {	// Tell SD to delete the file.
+				popItem();						// Pop that item from our path.
+				success = true;				// Success!
+			}										//
+		break;									// Jump out.
+		case folderType	:					// Folder type? This is also good.
+			if (clearDirectory()) {			// If we can clear this directory..
+				popItem();						// Pop this item from our path.
+				success = true;				// Success!
+			}										// 							
+		break;									// And jump.
+	}												//
+	return success;							// If we get here? Something didn't work.
 }
 
