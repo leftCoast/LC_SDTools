@@ -24,7 +24,7 @@ void freePathStr(void) { resizeBuff(0,&filePathStr); }
 bool flipBytes = false;	
 
 
-// Stack based class thata flips the byte order for the calls while it's in scope.
+// Stack based class that flips the byte order for the calls while it's in scope.
 // Automatically flips them back when going out of scope. NOT reentrant!
 
 bigIndian::bigIndian(void) { flipBytes=true; }
@@ -205,7 +205,17 @@ File TRUNCATE_FILE(const char* path) {
 	SD.remove(path);							// Delete the file. So now it has zero bytes of data.
 	return SD.open(path,FILE_WRITE);		// Re-open the file. Now its been truncated. (Sigh..)
 }													// AND NOW WE HAVE A TRUNCATED FILE.
-							
+
+
+/*
+void truncateFile(File aFile) {
+
+	char* path;
+	uint8_t truncate(uint32_t size);
+	path = NULL;
+	aFile							
+*/
+
 
 // fcpy() : The file version of strcpy(). The dest file must be open for writing. The src
 // file must be, at least, open for reading. (Writing is ok too) The dest file index is
