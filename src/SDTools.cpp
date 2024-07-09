@@ -38,7 +38,8 @@ bool	SDFileErr = false;
 
 
 // For reading two byte numbers.
-bool read16(uint16_t* result,File f) {
+//bool read16(uint16_t* result,File f) {
+bool read16(void* result,File f) {
 
 	uint8_t	tempByte;
 	
@@ -65,7 +66,7 @@ bool write16(uint16_t val, File f) {
 		((uint8_t *)&val)[1] = ((uint8_t *)&val)[0];
 		((uint8_t *)&val)[0] = tempByte;
 	}
-	if (f.write(&val,4)==4) {
+	if (f.write((char*)&val,4)==4) {
 		return true;
 	}
 	SDFileErr = true;
@@ -74,7 +75,8 @@ bool write16(uint16_t val, File f) {
 
 
 // For reading four byte numbers.
-bool read32(uint32_t* result,File f) {
+//bool read32(uint32_t* result,File f) {
+bool read32(void* result,File f) {
   
   	uint8_t	tempByte;
   	
@@ -94,6 +96,7 @@ bool read32(uint32_t* result,File f) {
   
   
 // For writing four byte numbers.  
+//bool write32(uint32_t val, File f) {
 bool write32(uint32_t val, File f) {
   
   	uint8_t	tempByte;
@@ -105,7 +108,7 @@ bool write32(uint32_t val, File f) {
 		((uint8_t*)&val)[1] = ((uint8_t*)&val)[2];
 		((uint8_t*)&val)[0] = tempByte;
 	}
-	if(f.write(&val,4)==4) {
+	if(f.write((char*)&val,4)==4) {
 		return true;
 	}
 	SDFileErr = true;

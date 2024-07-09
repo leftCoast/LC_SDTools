@@ -6,6 +6,26 @@
 
 //#include <debug.h>
 
+// If you look for a filename ending in '/'. 9 out of 10 times SD will crash your program.
+// So, we make sure the silly things are clipped off before asking.
+void clipTrialingSlash(char* instr) {
+
+	int index;
+	
+	if (instr) {								// If we got something..													
+		index = 0;								// Set our index to zero.
+		while(instr[index]!='\0') {		// Go find the end of the string!
+			index++;								// Zoom zoom zoom!
+		}											//
+		if (index>1) {							// If the end of the string is past the second char..
+			if (instr[index-1]=='/') {		// If the char before the end is.. SLASH.
+				instr[index-1]='\0';			// Pop a '\0' on that nasty slash.
+			}										// Our work is done here.
+		}
+	}
+}
+
+	
 
 //****************************************************************************************
 // pathItem:
@@ -230,10 +250,11 @@ pathItemType filePath::checkPathPlus(const char* inPath) {
 		if (currentItem->getType()==fileType) {		// If the current itme is a file..
 			return theType;									// We bail!
 		}															// If we're here we have a current time and its not a file.
-		numBytes = numPathBytes() + strlen(inPath);	// Calc. the total number of bytes needed.
+		numBytes = numPathBytes() + strlen(inPath) + 1;	// Calc. the total number of bytes needed.
 		if (resizeBuff(numBytes,&testPath)) {			// If we can grab the memory for this path..
 			strcpy(testPath,getPath());					// Grab the path we have.
 			strcat(testPath,inPath);						// Add the inPath we got.
+			clipTrialingSlash(testPath);					// Loose any stray slashes.
 			testFile = SD.open(testPath,FILE_READ);	// Try opening the constructed path.
 			if (testFile) {									// If this constructed path exists..
 				if (testFile.isDirectory()) {				// If the returned file is a directory..
@@ -259,11 +280,9 @@ bool filePath::addPath(const char* inPath) {
 	char*		pathBuff;
 	bool		success;
 	
-	success = false;													// Well, it ain't a success yet.
-	Serial.print("addPath adding ");
-	Serial.println(inPath);												
+	success = false;													// Well, it ain't a success yet.									
 	if (checkPathPlus(tempPath.getStr())) {					// If this checks out..
-		numBytes = numPathBytes() + tempPath.numChars();	// Calc. num bytes.
+		numBytes = numPathBytes() + tempPath.numChars() + 1;	// Calc. num bytes.
 		if (resizeBuff(numBytes,&pathBuff)) {					// If we can grab some RAM..
 			strcpy(pathBuff,getPath());							// Stuff in our path.
 			strcat(pathBuff,tempPath.getStr());					// Add the inPath text.
@@ -339,6 +358,7 @@ bool filePath::setPath(const char* inPath) {
 	}																	// At this point we've gone through all the folders. We MAY have a file at the end. We'll check.
 	if (!fail) {													// If we did not fail..
 		if (nIndex>0) {											// If we have a non empty name string..
+			clipTrialingSlash(itemName);						// Loose any stray slashes. (just in case..)
 			switch (checkPathPlus(itemName)) {				// See what we find..
 				case folderType :									// If its a folder? (Really we should fail, but for now, we'll fix it.)
 					aFolder = new folderItem(itemName);		// Have a go at creating a folderItem.	
@@ -356,7 +376,7 @@ bool filePath::setPath(const char* inPath) {
 						fail = true;								// We can't get the RAM, we fail!
 					}													//
 				break;												// Last file is complete.
-				case rootType	:	Serial.println("found root"); break;								// We started with root. Adding another is a fail.
+				case rootType	:									// We started with root. Adding another is a fail.
 				case noType		:  fail = true;	break;	// And noType means the path did not exist. Its a fail.
 			}															//
 		}																//
@@ -599,8 +619,6 @@ void filePath::popItem(void) {
 			if (pathList==theLastGuy) {		// If the pathList is actually pointing to the last guy.. IE the root.
 				pathList = NULL;					// Set pathList to NULL. Because its going to be empty.
 			}											//
-			Serial.print("Deleting ");
-			Serial.println(theLastGuy->getName());
 			delete (theLastGuy);					// Delete this last node. Wich will unhook it if necessary.
 		}												//
 	}													//
@@ -629,7 +647,7 @@ bool filePath::clearDirectory(void) {
 				} else {														// Can't do the push?
 					return false;											// Something broke, fail.
 				}																//
-			}																	//
+			}
 		}	while(true);													// We're going to rely on recursion.. 
 	} else {																	//
 		return true;														// Why? It's clear ain't it?
@@ -643,7 +661,7 @@ bool filePath::deleteCurrentItem(void) {
 	
 	bool success;
 	
-	success = false;
+	success = false;							// Ain't a succes yet.
 	switch(getPathType()) {					// Let's see what we're a path to..
 		case noType		:						// No type? Not possible.
 		case rootType	: 						// Root?! Root can NOT be deleted. Fail!
@@ -655,12 +673,14 @@ bool filePath::deleteCurrentItem(void) {
 			}										//
 		break;									// Jump out.
 		case folderType	:					// Folder type? This is also good.
-			if (clearDirectory()) {			// If we can clear this directory..
-				popItem();						// Pop this item from our path.
-				success = true;				// Success!
-			}										// 							
-		break;									// And jump.
-	}												//
-	return success;							// If we get here? Something didn't work.
+			if (clearDirectory()) {				// If we can clear this directory..
+				if (SD.rmdir(getPath())) {	// Tell SD to delete the file.
+					popItem();							// Pop this item from our path.
+					success = true;					// Success!
+				}
+			}											// 							
+		break;										// And jump.
+	}													//
+	return success;								// If we get here? Something didn't work.
 }
 

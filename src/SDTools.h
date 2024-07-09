@@ -37,20 +37,18 @@ class bigIndian {
 
 
 // For reading two byte numbers.
-bool read16(uint16_t* result,File f);
-
+//bool read16(uint16_t* result,File f);
+bool read16(void* result,File f);
 
 // For writing two byte numbers.
 bool write16(uint16_t val, File f);
 
-
 // For reading four byte numbers.
-bool read32(uint32_t* result,File f);
-  
+//bool read32(uint32_t* result,File f);
+bool read32(void* result,File f);  
   
 // For writing four byte numbers.  
 bool write32(uint32_t val, File f);
-
 
 
 // ***************************************************
