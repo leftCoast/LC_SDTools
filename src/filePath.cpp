@@ -4,7 +4,6 @@
 #include <resizeBuff.h>
 #include <strTools.h>
 
-//#include <debug.h>
 
 // If you look for a filename ending in '/'. 9 out of 10 times SD will crash your program.
 // So, we make sure the silly things are clipped off before asking.
