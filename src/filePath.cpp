@@ -500,7 +500,7 @@ void filePath::refreshChildList(void) {
 }
 
 
-// Lest see how many kids we have..
+// Lets see how many kids we have..
 int filePath::numChildItems(void) {
 
 	if (childList) {								// If the pointer is Non NULL..

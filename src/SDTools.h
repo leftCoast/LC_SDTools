@@ -3,7 +3,7 @@
 
 #include <SD.h>
 
-#define FILE_TRUNCATE (O_READ | O_WRITE | O_CREAT)	// See if this works..
+//#define FILE_TRUNCATE (O_READ | O_WRITE | O_CREAT)	// See if this works..
 
 //****************************************************************************************
 //
