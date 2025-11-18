@@ -2,8 +2,8 @@
 #define SDTools_h
 
 #include <SD.h>
+#include <filePath.h>
 
-//#define FILE_TRUNCATE (O_READ | O_WRITE | O_CREAT)	// See if this works..
 
 //****************************************************************************************
 //
@@ -54,6 +54,11 @@ bool write32(uint32_t val, File f);
 // ***************************************************
 //          End of the big/little indian thing.
 // ***************************************************
+
+
+
+// Returns true if the pathItem is NOT an added in Mac OS file. (Filters them out.)
+bool MacOSFilter(pathItem* inItem);
 
 
 // Returns true if this folderPath can be found, or created.

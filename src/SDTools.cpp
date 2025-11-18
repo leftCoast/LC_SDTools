@@ -121,6 +121,23 @@ bool write32(uint32_t val, File f) {
 // ***************************************************
 
 
+// Mac OS puts a bunch of stuff in the files you don't see. Until you look at them with
+// an Arduino. This allows you to pass in a pathItem to see if it's NOT a MacOS file.
+// Meaning you probably want to see this one.
+bool MacOSFilter(pathItem* inItem) {
+
+	if (inItem->getName()[0]=='_') 					return false;
+	if (!strcmp(inItem->getName(),"SPOTLI~1"))	return false;
+	if (!strcmp(inItem->getName(),"TRASHE~1"))	return false;
+	if (!strcmp(inItem->getName(),".TRASHES"))	return false;
+	if (!strcmp(inItem->getName(),"FSEVEN~1"))	return false;
+	if (strstr(inItem->getName(),"DS_STO"))		return false;
+	if (strstr(inItem->getName(),".DS_"))			return false;
+	if (strstr(inItem->getName(),"._"))				return false;
+	if (strstr(inItem->getName(),".FSEVE"))		return false;
+	else return true;
+}
+
 
 // Returns true if this folderPath can be found, or created.
 bool createFolder(const char* folderPath) {
