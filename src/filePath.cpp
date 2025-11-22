@@ -54,7 +54,17 @@ pathItem::pathItem(pathItem* aGrandItem)
 
 // No matter what we become, we'll need to dump this..
 pathItem::~pathItem(void) { }
+
+
+// Copies the item, but NOT the pointers. Basically giving a free floating item.	
+void pathItem::copyItem(pathItem* aGrandItem) {
 	
+	ourType = aGrandItem->ourType;	
+	strcpy(name,aGrandItem->name);
+	dllPrev = NULL;
+	dllNext = NULL;
+}
+
 
 // Everyone will have a path type. This is how we get around not having dynamic_cast.	
 pathItemType pathItem::getType(void) { return ourType; }
@@ -68,7 +78,11 @@ char* pathItem::getName(void) { return name; }
 // Folders will be more. But again, this is a good default.
 int pathItem::getNumPathChars(void) {  return strlen(name); }
 
-	
+
+// We're not adding a non item to a path. The buck stopps here!
+void pathItem::addNameToPath(char* path) {  }
+
+
 // Return a pointer to our parent object.
 pathItem* pathItem::getParent(void) { return (pathItem*)dllPrev; }
 
@@ -543,7 +557,12 @@ pathItem*  filePath::getChildItemByName(const char* name) {
 	}																//
 	return NULL;												// If we got here we didn't find it. Pass back NULL.
 }
-			
+		
+		
+// Bit of a liability here. But we're closing off the variable from random passer-bys. You
+// have to ask for it now.
+pathItem* filePath::getChildList(void) { return childList; }
+
 	
 // If one has a list of child items to choose from. This grabs the one with this passed
 // in name, copies it, then adds the copy to the end of the path list.	
@@ -627,6 +646,10 @@ void filePath::popItem(void) {
 		
 // If we're pointed at a directory, this should clear it out. And yes, it can get
 // recursive.
+// 
+// NOTE : Every time we recurse we grab only the first child. Why? Because last time we
+// deleted the first child. So this time it's the last time's second child. get it? It's
+// called a depth first search.
 bool filePath::clearDirectory(void) {
 
 	pathItem*	trace;
@@ -656,6 +679,9 @@ bool filePath::clearDirectory(void) {
 
 			
 // Delete what we are pointing at. This is going to get all recursive, so hold on tight.
+//
+// NOTE : The problem I see is that, if it runs across a file that isn't 8.3? It will fail
+// after doing massive shredding damage to the files down the line.
 bool filePath::deleteCurrentItem(void) {
 	
 	bool success;
@@ -672,14 +698,14 @@ bool filePath::deleteCurrentItem(void) {
 			}										//
 		break;									// Jump out.
 		case folderType	:					// Folder type? This is also good.
-			if (clearDirectory()) {				// If we can clear this directory..
+			if (clearDirectory()) {			// If we can clear this directory..
 				if (SD.rmdir(getPath())) {	// Tell SD to delete the file.
-					popItem();							// Pop this item from our path.
-					success = true;					// Success!
-				}
-			}											// 							
-		break;										// And jump.
-	}													//
-	return success;								// If we get here? Something didn't work.
+					popItem();					// Pop this item from our path.
+					success = true;			// Success!
+				}									//
+			}										// 							
+		break;									// And jump.
+	}												//
+	return success;							// If we get here? Something didn't work.
 }
 

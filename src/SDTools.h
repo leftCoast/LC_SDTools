@@ -58,7 +58,7 @@ bool write32(uint32_t val, File f);
 
 
 // Returns true if the pathItem is NOT an added in Mac OS file. (Filters them out.)
-bool MacOSFilter(pathItem* inItem);
+bool MacOSFilter(const char* fileName);
 
 
 // Returns true if this folderPath can be found, or created.
@@ -66,7 +66,7 @@ bool createFolder(const char* folderPath);
 
 
 // Given a path, baseName and extension this hands back a string with a path to an unused
-// numbered file. For example "/docs/NoName5.doc". IF it can not allocated this file it
+// numbered file. For example "/docs/NoName5.doc". If it can not allocated this file it
 // will return NULL. IF THIS IS A SUCCESS, YOU MUST COPY THE RETURNED STRING. It won't last
 // very long before being recycled.
 char* numberedFilePath(const char* folderPath,const char* baseName,const char* extension);

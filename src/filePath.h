@@ -25,11 +25,12 @@ class pathItem : public dblLinkListObj {
 				pathItem(void);
 				pathItem(pathItem* aGrandItem);
 	virtual	~pathItem(void);
-	
+				
+				void				copyItem(pathItem* aGrandItem);
 				pathItemType	getType(void);
 	virtual	char* 			getName(void);
 	virtual	int				getNumPathChars(void);
-	virtual	void				addNameToPath(char* path) =0;
+	virtual	void				addNameToPath(char* path);
 	virtual	pathItem*		getParent(void);
 				pathItem*		getNext(void);
 				
@@ -123,12 +124,15 @@ class filePath {
 				void				dumpChildList(void);
 				void				refreshChildList(void);
 				int				numChildItems(void);
+				pathItem*		getChildList(void);
 				pathItem*		getChildItemByName(const char* name);
 				bool				pushChildItemByName(const char* name);
-	virtual	bool				pushItem(pathItem* theNewGuy);
 	virtual	void				popItem(void);
 				bool				clearDirectory(void);
 				bool				deleteCurrentItem(void);
+			
+	protected:
+	virtual	bool				pushItem(pathItem* theNewGuy); // Why is this virtual?
 				
 				pathItem*	pathList;
 				pathItem*	childList;
