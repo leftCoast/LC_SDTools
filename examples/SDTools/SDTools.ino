@@ -1,3 +1,12 @@
+
+// ***************************************************************************************
+//
+// Documentation for this, and the rest of the LC libraies that make this up.
+// Here's the book : https://github.com/leftCoast/LC_libraryDocs/blob/main/LC%20libraries.pdf
+// Search for : SDTools, filePath, strTools, lilParser
+//
+// ***************************************************************************************
+
 /*
   pwd   - Print working directory.
   cd    - Change directory,
@@ -8,13 +17,24 @@
 
 #include <SD.h>
 #include <adafruit_1947.h>
-#include <strTools.h>
-#include <lilParser.h>
 #include <SDTools.h>
 #include <filePath.h>
+#include <strTools.h>
+#include <lilParser.h>
+
+// ***************************************************************************************
+//
+// NOTE : 
+// This setup initializes an Adafruit touch screen. This is only because that's what's on
+// my system. Your system will most likely be different. If may not have a display at all.
+// If you have no display, remove the screen setup stuff from here. If is does? And it's a
+// SPI display? You best initialize it. Otherwise it may cause weird glitches on the bus
+// and generally make trouble for you.
+//
+// ***************************************************************************************
 
 
-#define DSP_CS      10		// We need to fire up the display because it's on the SPI bus.
+#define DSP_CS      10		// We need to fire up the display because it's on our SPI bus.
 #define SD_CS        4     // SD chip select pin number. Change to suit your setup.
 
 
@@ -26,45 +46,50 @@ enum commands {   noCommand,  // ALWAYS start with noCommand. Or something simla
                   listDir,
                   makeDir,
                   deleteFile
-              };          // Our list of commands.
+              };				// Our list of commands.
 
-lilParser   ourParser;        // The parser object.
-filePath    wd;
+lilParser   ourParser;		// The parser object.
+filePath    wd;				// Working directory path object
 
 
 void setup() {
 
 	Serial.begin(9600);
-	screen = (displayObj*)new adafruit_1947(DSP_CS,-1);
-	if (!screen) {                                      // If we can't get the screen running..
-		Serial.println("NO SCREEN!");                     // Send an error out the serial port.
-		Serial.flush();                                   // Make sure it goes out!
-		while (true);                                     // Lock processor here forever.
-	}                                                   //
-  screen->begin();                                    //
-	screen->fillScreen(&black);                         // Looks like we have a screen.
-                                                      //
-	if (!SD.begin(SD_CS)) {                             // If we can not initialze a SD drive.
-		Serial.println("No SD Drive!");                   // Tell the user.
-		while (1);                                        // Just stop here.
-	}
-	ourParser.addCmd(printWD, "pwd");                   // Add pwd command  [ If they type "pwd" they mean printWD ]
-	ourParser.addCmd(changeDir, "cd");                  // Add cd command
-	ourParser.addCmd(listDir, "ls");                    // Add ls command
-	ourParser.addCmd(makeDir, "mkdr");                  // Add mkdr command
-	ourParser.addCmd(makeDir, "mkdir");                 // We'll take it either way.
-	ourParser.addCmd(deleteFile, "rm");                 // Add rm command.
-                                                      //
-  showComs();                                         // Lets see the list of commands.
-  wd.setPath("/");                                    // Initial path setting.
-  showCurs();                                         // Default curser setting.
+	
+	// Like I said. I need to fire up my screen because it's SPI.
+	// Np SPI screen? Delete this entire screen setup section.
+	screen = (displayObj*)new adafruit_1947(DSP_CS,-1);	// Create the screen.
+	if (!screen) {														// If we can't get the screen running..
+		Serial.println("NO SCREEN!");								// Send an error out the serial port.
+		while (true);													// Lock processor here forever.
+	}																		//
+	screen->begin();													//
+	screen->fillScreen(&black);									// Looks like we have a screen.
+	// ENd screen section.
+	
+	if (!SD.begin(SD_CS)) {											// If we can not initialze a SD drive.
+		Serial.println("No SD Drive!");							// Tell the user.
+		while (1);														// Just stop here.
+	}																		//
+	ourParser.addCmd(printWD, "pwd");							// Add pwd command  [ If they type "pwd" they mean printWD ]
+	ourParser.addCmd(changeDir, "cd");							// Add cd command
+	ourParser.addCmd(listDir, "ls");								// Add ls command
+	ourParser.addCmd(makeDir, "mkdr");							// Add mkdr command
+	ourParser.addCmd(makeDir, "mkdir");							// We'll take it either way.
+	ourParser.addCmd(deleteFile, "rm");							// Add rm command.
+	showComs();															// Lets see the list of commands.
+	wd.setPath("/");													// Initial path setting.
+	showCurs();															// Default curser setting.
 }
 
+
+// Prints out the working directory, like a real UNIX machine!
 void showCurs(void) {
 
   Serial.print(wd.getPath());
   Serial.print(" > ");
 }
+
 
 // Your loop where it parses out all your typings.
 void loop(void) {
@@ -73,22 +98,22 @@ void loop(void) {
 	int   command;
   bool  curs;
 
-	if (Serial.available()) {                                       // If serial has some data..
-    curs = true;                                                  // Show the cursor after..
-		inChar = Serial.read();                                       // Read out a charactor.
-		Serial.print(inChar);                                         // If using development machine, echo the charactor.
-		command = ourParser.addChar(inChar);                          // Try parsing what we have.
-		switch (command) {                                            // Check the results.
+	if (Serial.available()) {														// If serial has some data..
+    curs = true;																		// Show the cursor after..
+		inChar = Serial.read();														// Read out a charactor.
+		Serial.print(inChar);														// If using development machine, echo the charactor.
+		command = ourParser.addChar(inChar);									// Try parsing what we have.
+		switch (command) {															// Check the results.
 			case noCommand    : curs = false;                  break;   // Nothing to report, move along.
 			case printWD      : Serial.println(wd.getPath());  break;   // Easy peasy! Just print wd out.
 			case listDir      : listDirectory();               break;   // Print out a listing of the working directory.
 			case makeDir      : makeDirectory();               break;   // See if we can create a directory in the working directory.
 			case changeDir    : changeDirectory();             break;   // Try changing directorys.
 			case deleteFile   : deleteItem();                  break;   // Delete a directory or file.
-			default           : showComs();                    break;   // No idea. Show them the list.
-		}
-    if (curs) showCurs();
-	}
+			default           : showComs();                    break;	// No idea. Show them the list.
+		}																					//
+    if (curs) showCurs();															// SHow the cursor.
+	}																						//
 }
 
 
@@ -108,15 +133,15 @@ void showComs(void) {
   Serial.println("pwd           show working directory.");
   Serial.println("ls            list items in the working directory.");
   Serial.println("cd *path*     Can be fullpath starting at '/' or");
-  Serial.println("              reletive path startig with just a");
-  Serial.println("              directoty. Or .. to go back to");
+  Serial.println("              relative path starting with just a");
+  Serial.println("              directory. Or .. to go back to");
   Serial.println("              parent directory.");
   Serial.println("mkdir *path*  Can be fullpath starting at '/' or"); 
-  Serial.println("              reletive path startig with just a");
-  Serial.println("              directoty.");
+  Serial.println("              relative path starting with just a");
+  Serial.println("              directory.");
   Serial.println("rm *path*     Can be fullpath starting at '/' or"); 
-  Serial.println("              reletive path starting with just a");
-  Serial.println("              directoty. Will delete files or");
+  Serial.println("              relative path starting with just a");
+  Serial.println("              directory. Will delete files or");
   Serial.println("              directories. Directories do NOT need");
   Serial.println("              to be empty, this will empty them.");
   Serial.println("              NOTE: Be careful with this. Emptying");
@@ -125,7 +150,8 @@ void showComs(void) {
 }
 
 
-bool checkFile(pathItem*	item) {
+// This filters out invisible files.
+bool checkFile(pathItem* item) {
 
   if (item->name[0]=='.') return false;
   return true;
@@ -142,7 +168,8 @@ bool checkFile(pathItem*	item) {
 //
 pathPrefix decodePrefix(const char* param) {
 
-  delay(3);                                                 // Dash said to put this in to fix wicked bug. I did, it worked. No clue!
+  delay(3);                                                 // Dash said to put this in to fix wicked bug.
+  																				// I did, it worked. No clue!
   if (!strcmp(param,"/")) return setRoot;                   // Just "/" alone means root. setRoot.
   else if (param[0]=='/') return fullPath;                  // Starts with '/' + more..   fullPath.
   else if (!strcmp(param,"..")) return upOne;               // Just ".." means go up one. upOne.
@@ -168,9 +195,9 @@ void listDirectory(void) {
       Serial.println("This directory is empty.");               // Tell the user.
       return;                                                   // And walk away.
     } else {                                                    // Else, we DO have kids to list.
-      trace = wd.childList;																	    // Grab a pointer to the first child.
-      while(trace) {																						// While we have a non-NULL pointer..
-        if (checkFile(trace)) {																	// Pass this child through the crucible of the user's filter function.
+      trace = wd.getChildList();										    // Grab a pointer to the first child.
+      while(trace) {															 // While we have a non-NULL pointer..
+        if (checkFile(trace)) {											 // Pass this child through the crucible of the user's filter function.
           Serial.print(trace->getName());                       // If passed, print it's name.
           if (trace->getType()!=fileType) {                     // If it's a directory..
             Serial.print("/");                                  // Add the "I'm a direcotry" slash to it.
@@ -190,7 +217,7 @@ void makeDirectory(void) {
   tempStr param;
   int     numBytes;
   char*   pathBuff;
-
+  Serial.println("Create directory?");
   pathBuff = NULL;                                // Make SURE these start at NULL.
   if (ourParser.numParams()==1) {                 // If they typed in something past the command.
     param.setStr(ourParser.getParamBuff());       // We get the first parameter. Should be the new folder's name/path.
