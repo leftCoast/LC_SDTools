@@ -256,31 +256,32 @@ pathItemType filePath::checkPathPlus(const char* inPath) {
 	pathItem*		currentItem;
 	pathItemType	theType;
 	
-	testPath = NULL;											// NULL out the string we'll be allocating.
-	theType = noType;											// Set default type as non-type.
-	currentItem = getCurrItem();							// Grab the current "last" item on our path.
- 	if(currentItem) {											// If we have a current item..
-		if (currentItem->getType()==fileType) {		// If the current itme is a file..
-			return theType;									// We bail!
-		}															// If we're here we have a current time and its not a file.
+	if (!inPath) return getPathType();						// Wait! Not sending in anything? No change.
+	testPath = NULL;												// NULL out the string we'll be allocating.
+	theType = noType;												// Set default type as non-type.
+	currentItem = getCurrItem();								// Grab the current "last" item on our path.
+ 	if(currentItem) {												// If we have a current item..
+		if (currentItem->getType()==fileType) {			// If the current itme is a file..
+			return theType;										// We bail!
+		}																// If we're here we have a current type and its not a file.
 		numBytes = numPathBytes() + strlen(inPath) + 1;	// Calc. the total number of bytes needed.
-		if (resizeBuff(numBytes,&testPath)) {			// If we can grab the memory for this path..
-			strcpy(testPath,getPath());					// Grab the path we have.
-			strcat(testPath,inPath);						// Add the inPath we got.
-			clipTrialingSlash(testPath);					// Loose any stray slashes.
-			testFile = SD.open(testPath,FILE_READ);	// Try opening the constructed path.
-			if (testFile) {									// If this constructed path exists..
-				if (testFile.isDirectory()) {				// If the returned file is a directory..
-					theType = folderType;					// We set our type to folderType.
-				} else {											// Else, not a folder..
-					theType = fileType;						// We set our type to fileType.
-				}													//
-				testFile.close();								// Close the file/folder.
-			}														//
-			resizeBuff(0,&testPath);						// And recycle the path string.
-		}															//
-	}																//
-	return theType;											// And return our results.
+		if (resizeBuff(numBytes,&testPath)) {				// If we can grab the memory for this path..
+			strcpy(testPath,getPath());						// Grab the path we have.
+			strcat(testPath,inPath);							// Add the inPath we got.
+			clipTrialingSlash(testPath);						// Loose any stray slashes.
+			testFile = SD.open(testPath,FILE_READ);		// Try opening the constructed path.
+			if (testFile) {										// If this constructed path exists..
+				if (testFile.isDirectory()) {					// If the returned file is a directory..
+					theType = folderType;						// We set our type to folderType.
+				} else {												// Else, not a folder..
+					theType = fileType;							// We set our type to fileType.
+				}														//
+				testFile.close();									// Close the file/folder.
+			}															//
+			resizeBuff(0,&testPath);							// And recycle the path string.
+		}																//
+	}																	//
+	return theType;												// And return our results.
 }
 
 
@@ -534,6 +535,7 @@ pathItem*  filePath::getChildItemByName(const char* name) {
 	char			fileName[13];
 	bool			success;
 	
+	if (!name) return NULL;									// Just stop right there! NULL gives NULL.
 	success = false;											// Not a success yet.
 	tempName = NULL;											// Start tempName at NULL.
 	numBytes = strlen(name)+1;								// How many bytes will we need to copy the passed in name?
