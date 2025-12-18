@@ -43,7 +43,7 @@ bool read16(void* result,File f) {
 
 	uint8_t	tempByte;
 	
-	if (f.read(result,2)==2) {
+	if (f.read((uint8_t *)result,2)==2) {
 		if (flipBytes) {
 			tempByte = ((uint8_t *)result)[1];
 			((uint8_t *)result)[1] = ((uint8_t *)result)[0];
@@ -66,7 +66,7 @@ bool write16(uint16_t val, File f) {
 		((uint8_t *)&val)[1] = ((uint8_t *)&val)[0];
 		((uint8_t *)&val)[0] = tempByte;
 	}
-	if (f.write((char*)&val,4)==4) {
+	if (f.write((uint8_t *)&val,4)==4) {
 		return true;
 	}
 	SDFileErr = true;
@@ -80,7 +80,7 @@ bool read32(void* result,File f) {
   
   	uint8_t	tempByte;
   	
-	if (f.read(result,4)==4) {
+	if (f.read((uint8_t *)result,4)==4) {
 		if (flipBytes) {
 			tempByte = ((uint8_t *)result)[3];
 			((uint8_t *)result)[3] = ((uint8_t *)result)[0];
@@ -108,7 +108,7 @@ bool write32(uint32_t val, File f) {
 		((uint8_t*)&val)[1] = ((uint8_t*)&val)[2];
 		((uint8_t*)&val)[0] = tempByte;
 	}
-	if(f.write((char*)&val,4)==4) {
+	if(f.write((const uint8_t*)&val,4)==4) {
 		return true;
 	}
 	SDFileErr = true;
@@ -117,7 +117,7 @@ bool write32(uint32_t val, File f) {
 
 
 // ***************************************************
-//                End of the reservation.
+//                  More goodies.
 // ***************************************************
 
 
@@ -263,7 +263,7 @@ void fcpy(File dest,File src) {
 	for (int i=0;i<cpyBuff.numPasses;i++) {
 		numBytes = min(cpyBuff.numBuffBytes,remaingBytes);
 		src.read((uint8_t*)(cpyBuff.theBuff),numBytes);
-		dest.write((char*)(cpyBuff.theBuff),numBytes);
+		dest.write((uint8_t *)(cpyBuff.theBuff),numBytes);
 		remaingBytes = remaingBytes - numBytes;
 	}
 	src.seek(filePos);						// Put it back like we found it.						
@@ -287,7 +287,7 @@ void fcat(File dest,File src) {
 	for (int i=0;i<cpyBuff.numPasses;i++) {						// For every pass through..
 		numBytes = min(cpyBuff.numBuffBytes,remaingBytes);		// Use buffer size or remaining bytes.
 		src.read((uint8_t*)(cpyBuff.theBuff),numBytes);			// Fill the buffer.
-		dest.write((char*)(cpyBuff.theBuff),numBytes);			// Write out the buffer.
+		dest.write((uint8_t *)(cpyBuff.theBuff),numBytes);		// Write out the buffer.
 		remaingBytes = remaingBytes - numBytes;					// Recalculate the remaining bytes.
 	}																			// 
 	src.seek(filePos);													// Put it back like we found it.					

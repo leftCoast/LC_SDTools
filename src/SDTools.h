@@ -15,7 +15,7 @@
 
 // Put this at top of function, and for the duration of the function, all intergers will
 // be swapped both reading and writing to files.
-#define	BYTE_SWAP	bigIndian swap;
+#define	BYTE_SWAP 	bigIndian swap;
 
 
 // This sets if we flip or not.
@@ -51,11 +51,10 @@ bool read32(void* result,File f);
 bool write32(uint32_t val, File f);
 
 
-// ***************************************************
-//          End of the big/little indian thing.
-// ***************************************************
 
-
+// ***************************************************
+//                  More goodies.
+// ***************************************************
 
 // Returns true if the pathItem is NOT an added in Mac OS file. (Filters them out.)
 bool MacOSFilter(const char* fileName);
