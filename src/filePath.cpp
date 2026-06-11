@@ -3,12 +3,12 @@
 #include <SD.h>
 #include <resizeBuff.h>
 #include <strTools.h>
-
+#include <debug.h>
 
 // If you look for a filename ending in '/'. 9 out of 10 times SD will crash your program.
 // So, we make sure the silly things are clipped off before asking.
 void clipTrialingSlash(char* instr) {
-
+	
 	int index;
 	
 	if (instr) {								// If we got something..													
@@ -59,12 +59,24 @@ pathItem::~pathItem(void) { }
 // Copies the item, but NOT the pointers. Basically giving a free floating item.	
 void pathItem::copyItem(pathItem* aGrandItem) {
 	
-	ourType = aGrandItem->ourType;	
+	ourType = aGrandItem->ourType;
 	strcpy(name,aGrandItem->name);
 	dllPrev = NULL;
 	dllNext = NULL;
 }
 
+
+bool pathItem::setName(const char* inName) {
+	
+	if (inName) {						// First, non NULL address
+		if (strlen(inName)<13) {	// Ok, less than our 13 chars.
+			strcpy(name,inName);		// FIne we'll take it.
+			upCase(name);				// For now we use uppercase.
+			return true;				// Return our success!
+		}									//
+	}										//
+	return false;						// If we got here? We got a bad string.
+}
 
 // Everyone will have a path type. This is how we get around not having dynamic_cast.	
 pathItemType pathItem::getType(void) { return ourType; }
@@ -101,16 +113,21 @@ pathItem* pathItem::getNext(void) { return (pathItem*)dllNext; }
 
 // Create a root item..
 rootItem::rootItem(void)
-	:pathItem() {
+	:pathItem() { 
 	
-	ourType = rootType;	// Our type is root.
-	strcpy(name,"/");		// Our only choice of name is '/';
+	if (setName("/")) {		// If we can use this name..
+		ourType = rootType;	// Our type is root.
+	} else {						// Else bad name?
+		ourType = noType;		// We have no name!
+	}
 }
 
 	
 // Nothing to dispose of.	
-rootItem::~rootItem(void) {  }
-	
+rootItem::~rootItem(void) { }
+
+
+
 
 // We only have one choice of name as a root and that's '/'. So the answer is 1.
 int rootItem::getNumPathChars(void) { return 1; }
@@ -135,9 +152,11 @@ void rootItem::addNameToPath(char* path) { strcpy(path,name); }
 fileItem::fileItem(const char* fileName)
 	:pathItem() {
 	
-	ourType = fileType;		// Our type will be file type.
-	strcpy(name,fileName);	// And our name is passed in to us.
-	upCase(name);				// For now we use uppercase.
+	if (setName(fileName)) {	// If we can use this name..
+		ourType = fileType;		// Our type will be file type.
+	} else {							// Else bad name?
+			ourType = noType;		// We have no name!
+	}
 }
 	
 
@@ -146,7 +165,12 @@ fileItem::~fileItem(void) { }
 
 
 // We are building a text path. The buffer is big enough, just add yourself to the end.
-void fileItem::addNameToPath(char* path) { strcat(path,name); }
+void fileItem::addNameToPath(char* path) {
+
+	if (ourType!=noType) { 
+		strcat(path,name);
+	}
+}
 
 
 	
@@ -160,27 +184,39 @@ void fileItem::addNameToPath(char* path) { strcat(path,name); }
 // Create a file item..	
 folderItem::folderItem(const char* folderName)
 	:pathItem() {
-	
-	ourType = folderType;		// Our type will be folder type.
-	strcpy(name,folderName);	// And our name is passed in to us. (Just name, no slash!)
-	upCase(name);					// For now we use uppercase.
-}
+
+	if (setName(folderName)) {		// If we can use this name..
+		ourType = folderType;		// Our type will be folder type.
+	} else {								// Else bad name?
+		ourType = noType;				// We have no name!
+	}
+}	
+
 
 
 // Nothing special to delete here..
-folderItem::~folderItem(void) {  }
+folderItem::~folderItem(void) { }
 	
 
 // Folders in paths have trailing '/'. So we add this in.	
-void folderItem::addNameToPath( char* path) {  
+void folderItem::addNameToPath( char* path)  {
 
-	strcat(path,name);
-	strcat(path,"/");
+	if (ourType!=noType) { 
+		strcat(path,name);
+		strcat(path,"/");
+	}
 }	
 
 	
 // Special case for number of path chars. Num chars in name + one for the '/'.	
-int folderItem::getNumPathChars(void) { return strlen(name) + 1; }
+int folderItem::getNumPathChars(void) {
+
+	if (ourType!=noType) { 
+		return strlen(name) + 1;
+	} else {
+		return 0;
+	}
+}
 
 
 
@@ -195,7 +231,7 @@ int folderItem::getNumPathChars(void) { return strlen(name) + 1; }
 
 
 filePath::filePath(void) {
-
+	
 	pathList		= NULL;
 	childList	= NULL;
 	path			= NULL;
@@ -207,7 +243,7 @@ filePath::~filePath(void) { reset(); }
 
 // Same effect as just dumping everything. In fact, the destructor uses it.
 void filePath::reset(void) {
-	
+		
 	dumpChildList();					// Loose the chile list, if we have one.
 	if (pathList) {					// If we have a non NULL path list..
 		pathList->dumpList();		// We dump all the nodes attached to this list node.
@@ -220,7 +256,7 @@ void filePath::reset(void) {
 
 // Returns the total number of path bytes needed to hold the path string.
 int filePath::numPathBytes(void) {
-
+	
  	pathItem*	trace;
  	int			numBytes;
  	
@@ -240,16 +276,15 @@ int filePath::numPathBytes(void) {
 pathItemType filePath::getPathType(void) { return getCurrItem()->getType(); }
 
 
-
 // Paths point at things. Directories, files.. Root? This passes back the name of what
 // this is a path to.
 char* filePath::getPathName(void) { return getCurrItem()->getName(); }
 
 	
-// Ok, kinda' a special here. -IF- we were to add this name to our current pathList.. What
+// Ok, kinda' a special here. -IF- we were to add this path to our current pathList.. What
 // do we end up with? A file? A folder? Nothing at all? Find out and return the answer.
 pathItemType filePath::checkPathPlus(const char* inPath) {
-
+	
 	File				testFile;
 	int				numBytes;
 	char*				testPath;
@@ -257,11 +292,12 @@ pathItemType filePath::checkPathPlus(const char* inPath) {
 	pathItemType	theType;
 	
 	if (!inPath) return getPathType();						// Wait! Not sending in anything? No change.
+	if (inPath[0]=='\0') return getPathType();			// Again! Not sending in anything? No change.
 	testPath = NULL;												// NULL out the string we'll be allocating.
 	theType = noType;												// Set default type as non-type.
 	currentItem = getCurrItem();								// Grab the current "last" item on our path.
  	if(currentItem) {												// If we have a current item..
-		if (currentItem->getType()==fileType) {			// If the current itme is a file..
+		if (currentItem->getType()==fileType) {			// If the current item is a file..
 			return theType;										// We bail!
 		}																// If we're here we have a current type and its not a file.
 		numBytes = numPathBytes() + strlen(inPath) + 1;	// Calc. the total number of bytes needed.
@@ -277,8 +313,13 @@ pathItemType filePath::checkPathPlus(const char* inPath) {
 					theType = fileType;							// We set our type to fileType.
 				}														//
 				testFile.close();									// Close the file/folder.
-			}															//
+				//Serial.println("SUCCESS!");
+			} else {
+				Serial.println("*** FAIL ***");
+			}
 			resizeBuff(0,&testPath);							// And recycle the path string.
+		} else {
+			Serial.println("*** checkPathPlus() failed allocating testPath.");
 		}																//
 	}																	//
 	return theType;												// And return our results.
@@ -288,23 +329,24 @@ pathItemType filePath::checkPathPlus(const char* inPath) {
 // We'll try to add this path segment to our existing path. If it works out? This new path
 // will be our path. If not? No change.
 bool filePath::addPath(const char* inPath) {
-
+	
 	tempStr	tempPath(inPath);
 	int		numBytes;
 	char*		pathBuff;
 	bool		success;
 	
-	success = false;													// Well, it ain't a success yet.									
-	if (checkPathPlus(tempPath.getStr())) {					// If this checks out..
+	success = false;														// Well, it ain't a success yet.									
+	pathBuff = NULL;														// Buffers start at NULL.
+	if (checkPathPlus(tempPath.getStr())!=noType) {				// If this checks out..
 		numBytes = numPathBytes() + tempPath.numChars() + 1;	// Calc. num bytes.
-		if (resizeBuff(numBytes,&pathBuff)) {					// If we can grab some RAM..
-			strcpy(pathBuff,getPath());							// Stuff in our path.
-			strcat(pathBuff,tempPath.getStr());					// Add the inPath text.
-			success = setPath(pathBuff);							// This better work, already checked.
-         resizeBuff(0,&pathBuff);								// Recycle the RAM.
-      }																	//
-   }																		//
-   return success;													// return our result.
+		if (resizeBuff(numBytes,&pathBuff)) {						// If we can grab some RAM..
+			strcpy(pathBuff,getPath());								// Stuff in our path.
+			strcat(pathBuff,tempPath.getStr());						// Add the inPath text.
+			success = setPath(pathBuff);								// This better work, already checked.
+         resizeBuff(0,&pathBuff);									// Recycle the RAM.
+      }																		//
+   }																			//
+   return success;														// return our result.
 }
 
 
@@ -315,7 +357,7 @@ bool filePath::addPath(const char* inPath) {
 // pathList. HA! Look at the botton of the code. There is a call to refreshChildList()
 // upon success. So it DOES fill out the child list.
 bool filePath::setPath(const char* inPath) {
-
+	
 	rootItem*	theRoot;
 	folderItem*	aFolder;
 	fileItem*	aFile;
@@ -327,12 +369,12 @@ bool filePath::setPath(const char* inPath) {
 	fail = false;													// We've not failed. Yet..
 	reset();															// Clear out and reset everything.
 	if (inPath) {													// If we have been given a non-NULL path..
-		if (inPath[0]=='/') {									// Of said path string starts with '/'..
+		if (inPath[0]=='/') {									// If said path string starts with '/'..
 			theRoot = new rootItem();							// First thing is to grab a new root node.
 			if (theRoot) {											// If we got the root node..
 				pathList = theRoot;								// Start the list with it.
 				pIndex = 1;											// Set pIndex for reading out chars.
-			} else {													// Else, no root node? Ran out of RAM!
+			} else {													// Else, no root node? Ran out of RAM?
 				return false;										// Return false, we failed.
 			}															//
 		} else {														// Else, there's no leading '/'?
@@ -343,7 +385,7 @@ bool filePath::setPath(const char* inPath) {
 	}																	// Getting here we have at least a root setup.
 	nIndex = 0;														// Set nIndex for reading in a name.
 	while(inPath[pIndex]!='\0'&&!fail) {					// While we have chars to read and we have not failed..
-		if (inPath[pIndex]=='/') {								// If we have run across a '/'..
+		if (inPath[pIndex]=='/') {								// If we have run across a '/'.. (WE ARE RELYING ON NOT HITTING A / FIRST)
 			switch (checkPathPlus(itemName)) {				// itemName has the folder name, see if it exists and is of type..
 				case folderType :									// Folder! All is well!
 					aFolder = new folderItem(itemName);		// Have a go at creating a folderItem.	
@@ -352,11 +394,15 @@ bool filePath::setPath(const char* inPath) {
 						nIndex = 0;									// And reset the itemName index.
 					} else {											// Else, allocation failed..
 						fail = true;								// We can't get the RAM, we fail!
+						Serial.println("Can't allocate a folder!");
 					}													//
 				break;												// Done adding a folder to our path.
 				case rootType	:									// Root is dealt with above. Should NEVER get to here.
 				case fileType	:									// Preceding a '/' must not be a file type.
-				case noType		:  fail = true;	break;	// And noType means the path did not exist.
+				case noType		:									// And noType means the path did not exist.
+					Serial.println("noType error!");			// For now we send an error out.
+					fail = true;									// We'll call this a fail.
+				break;												// And we're done.
 			}															//
 			pIndex++;												// And we increment the text path index.
 		} else {														// Else, it wasn't a '/' so it "must" be a name char..
@@ -369,7 +415,11 @@ bool filePath::setPath(const char* inPath) {
 				fail = true;										// Not doing this today, call foul!
 			}															//
 		}																//
-	}																	// At this point we've gone through all the folders. We MAY have a file at the end. We'll check.
+	}
+	
+	//Serial.print("Did the while loop. fail = ");
+	//Serial.println(fail);															// At this point we've gone through all the folders. We MAY have a file at the end. We'll check.
+	
 	if (!fail) {													// If we did not fail..
 		if (nIndex>0) {											// If we have a non empty name string..
 			clipTrialingSlash(itemName);						// Loose any stray slashes. (just in case..)
@@ -406,12 +456,14 @@ bool filePath::setPath(const char* inPath) {
 
 // We'll allocate this, but we'll also reuse the memory. So be careful. It won't last.
 char* filePath::getPath(void) {
-
+	
 	pathItem*	trace;
+	int			pathBytes = 0;
 	
 	resizeBuff(0,&path);										// Clear the last path string.
 	if (pathList) {											// If we have a path list..
-		if (resizeBuff(numPathBytes(),&path)) {		// Grab the RAM needed to store the path string.
+		pathBytes = numPathBytes();
+		if (resizeBuff(pathBytes,&path)) {				// Grab the RAM needed to store the path string.
 			trace = pathList;									// Gab the root of the path.
 			while(trace) {										// While we're pointing to a path node..
 				trace->addNameToPath(path);				// Add this nodes name to the string.
@@ -427,7 +479,7 @@ char* filePath::getPath(void) {
 // to it for you to have a peek at it. Maybe ask what kind of thing it is, possibly
 // what's it's name? DON'T DELETE IT!
 pathItem* filePath::getCurrItem(void) {
-
+	
 	if (pathList) {									// Sanity check, we have a list right?
 		return (pathItem*)pathList->getLast();	// Grab the one at the end and return its address.
 	}														// If we got here? No list.
@@ -437,7 +489,7 @@ pathItem* filePath::getCurrItem(void) {
 
 // If we have a current item. Pass back a pointer to it's name. (Don't mess with it!)
 char* filePath::getCurrItemName(void) {
-
+	
 	pathItem*	currItem;
 	
 	currItem = getCurrItem();			// Grab the address of the last node on our list.
@@ -450,7 +502,7 @@ char* filePath::getCurrItemName(void) {
 
 // There are times when we need to clear out the child list. So it's here.
 void filePath::dumpChildList(void) {
-	
+		
 	if (childList) {					// If we currently have a child list..
 		childList->dumpList();		// Dump the tail of the list.
 		delete(childList);			// Dump what the list is pointing to.
@@ -462,52 +514,59 @@ void filePath::dumpChildList(void) {
 // We need to refresh the current child list. Dump what we have and fill it with what we
 // got. What we're saying is : If you are a folder, refresh your list of items you hold.
 void filePath::refreshChildList(void) {
-
+	
 	tempStr		ourPath;
 	File			dir;
 	File			entry;
 	pathItem*	newItem;
 	bool			done;
 	
-	dumpChildList();																		// Clear out the child list.
-	ourPath.setStr(getPath());															// Save off a copy of our current path.
-	if (ourPath.getStr()) {																// If we got our path string..
-		dir = SD.open(ourPath.getStr());												// Try opening the directory.
-		if (dir) {																			// If our directory exists..
-			if (dir.isDirectory()) {													// If it is a directory..
-				dir.rewindDirectory();                 							// Rewind it to the first entry.
-				done = false;                          							// We ain't done yet.
-				do {                                   							// Start looping through the entries.
-					entry = dir.openNextFile();										// Grab an entry.
-					if (entry) {															// If we got an entry..
-						if (strlen(entry.name()) <13) {								// If the entry name is 8.3 or shorter..
-							if (entry.isDirectory()) {									// If it is a directory..
-								newItem = new folderItem((char*)entry.name());	// Create the folderItem.
-							} else {															// Else its a file..
-								newItem = new fileItem((char*)entry.name());		// Create the new fileItem.
-							}																	//
-							if (newItem) {													// We actually got a new item..
-								if (childList) { 											// If there is a list..
-									newItem->linkToEnd(childList);					// Link yourself to the end of this list.
-								} else {														// Else there is no list.. (yet)
-									childList = newItem;									// You are the list!
-								}																//
-							} else {															// Else, it seems we've run out of RAM..
-								done = true;												// We're done with this.
-								dumpChildList();											// Our world is crumbling. Clear out the child list.
-							}																	//
-						}																		//
-						entry.close();                								// And we close the entry.	
-					} else {                            							// Else, we didn't get an entry from above.
-						done = true;                     							// No entry means, we are done here.
-					}																			//
-				} while (!done);                       							// And we do this loop, over and over, while we are not done.
-			}																					//
-			dir.close();                              							// Looping through entries is done, close up the original file.
-		}																						//
-	} else {																					// Else, we can't even open the path we have?
-		Serial.println("In refreshChildList()");									//
-		Serial.print("Can't open path [");											// This is bad, it actually warrants an error message.
+	dumpChildList();																			// Clear out the child list.
+	ourPath.setStr(getPath());																// Save off a copy of our current path.
+	if (ourPath.getStr()) {																	// If we got our path string..
+		dir = SD.open(ourPath.getStr());													// Try opening the directory.
+		if (dir) {																				// If our directory exists..
+			if (dir.isDirectory()) {														// If it is a directory..
+				dir.rewindDirectory();                 								// Rewind it to the first entry.
+				done = false;                          								// We ain't done yet.
+				do {                                   								// Start looping through the entries.
+					entry = dir.openNextFile();											// Grab an entry.
+					if (entry) {																// If we got an entry..
+						if (entry.name()) {													// If it's name is non-NULL..														
+							if (strlen(entry.name()) < 13) {								// If the entry name is 8.3 or shorter..
+								if (entry.isDirectory()) {									// If it is a directory..
+									newItem = new folderItem((char*)entry.name());	// Create the folderItem.
+								} else {															// Else its a file..
+									newItem = new fileItem((char*)entry.name());		// Create the new fileItem.
+								}																	//
+								if (newItem) {													// We actually got a new item..
+									if (childList) { 											// If there is a list..
+										newItem->linkToEnd(childList);					// Link yourself to the end of this list.
+									} else {														// Else there is no list.. (yet)
+										childList = newItem;									// You are the list!
+									}																//
+								} else {															// Else, it seems we've run out of RAM..
+									done = true;												// We're done with this.
+									Serial.println("path's newItem RAM fail!!");
+									dumpChildList();											// Our world is crumbling. Clear out the child list.
+								}																	//
+							}																		//
+							entry.close();                								// And we close the entry.	
+						} else {																	// Entry had a NULL name?!?
+							done = true;														// Well at this point we'll give up.
+							Serial.println("entry.name() = NULL!!!");
+							dumpChildList();													// Again, our world is crumbling. Clear out the child list.
+						}																			//
+					} else {                            								// Else, we didn't get an entry from above.
+						done = true;                     								// No entry means, we are done here.
+					}																				//
+				} while (!done);                       								// And we do this loop, over and over, while we are not done.
+			}																						//
+			dir.close();                              								// Looping through entries is done, close up the original file.
+		}																							//
+	} else {																						// Else, we can't even open the path we have?
+		Serial.println("In refreshChildList()");										//
+		Serial.print("Can't open path [");												// This is bad, it actually warrants an error message.
 		Serial.print(ourPath.getStr());
 		Serial.println("] ");
 		Serial.println("All paths should, at least, be valid!");
@@ -517,7 +576,7 @@ void filePath::refreshChildList(void) {
 
 // Lets see how many kids we have..
 int filePath::numChildItems(void) {
-
+	
 	if (childList) {								// If the pointer is Non NULL..
 		return childList->countTail() + 1;	// Gotta' add one for the first one.
 	}													//
@@ -528,7 +587,7 @@ int filePath::numChildItems(void) {
 // We want to SEE the child with this name. This does NOT unhook the child. It just gives
 // you a pointer to it. You can look, but don't mess with it!
 pathItem*  filePath::getChildItemByName(const char* name) {
-
+	
 	pathItem*	trace;
 	int			numBytes;
 	char*			tempName;
@@ -569,7 +628,7 @@ pathItem* filePath::getChildList(void) { return childList; }
 // If one has a list of child items to choose from. This grabs the one with this passed
 // in name, copies it, then adds the copy to the end of the path list.	
 bool filePath::pushChildItemByName(const char* name) {
-	
+
 	tempStr		theName(name);
 	pathItem*	theChild;
 	pathItem*	newItem;
@@ -602,7 +661,7 @@ bool filePath::pushChildItemByName(const char* name) {
 
 // Have a fileItem? This will add it to the end of your path list. (If possible)	
 bool filePath::pushItem(pathItem* theNewGuy) {
-
+	
 	pathItem*	theLastGuy;
 	bool			success;
 	
@@ -653,7 +712,7 @@ void filePath::popItem(void) {
 // deleted the first child. So this time it's the last time's second child. get it? It's
 // called a depth first search.
 bool filePath::clearDirectory(void) {
-
+	
 	pathItem*	trace;
 	
 	if(getPathType()==folderType||getPathType()==rootType) {	// Let's see what we're a path to..

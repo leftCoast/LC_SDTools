@@ -3,10 +3,16 @@
 
 #include <lists.h>
 
-
-
 extern void clipTrialingSlash(char* instr);
 
+
+// NOTE : What is this filePath stuff used for?
+//
+// File path is all about locating files and folders. A valid path, in it's universe, is
+// one that it can actually find. To that end, it checks every path given to it, to make
+// sure it can find it. Be it root, a folder or a file. Otherwise, it returns errors or
+// nothing. Either the path had invalid name in it, or it just couldn't find the item you
+// asked for.
 
 
 //****************************************************************************************
@@ -27,6 +33,7 @@ class pathItem : public dblLinkListObj {
 	virtual	~pathItem(void);
 				
 				void				copyItem(pathItem* aGrandItem);
+				bool				setName(const char* inName);
 				pathItemType	getType(void);
 	virtual	char* 			getName(void);
 	virtual	int				getNumPathChars(void);
