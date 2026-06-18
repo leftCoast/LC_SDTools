@@ -313,13 +313,8 @@ pathItemType filePath::checkPathPlus(const char* inPath) {
 					theType = fileType;							// We set our type to fileType.
 				}														//
 				testFile.close();									// Close the file/folder.
-				//Serial.println("SUCCESS!");
-			} else {
-				Serial.println("*** FAIL ***");
 			}
 			resizeBuff(0,&testPath);							// And recycle the path string.
-		} else {
-			Serial.println("*** checkPathPlus() failed allocating testPath.");
 		}																//
 	}																	//
 	return theType;												// And return our results.
@@ -394,13 +389,11 @@ bool filePath::setPath(const char* inPath) {
 						nIndex = 0;									// And reset the itemName index.
 					} else {											// Else, allocation failed..
 						fail = true;								// We can't get the RAM, we fail!
-						Serial.println("Can't allocate a folder!");
 					}													//
 				break;												// Done adding a folder to our path.
 				case rootType	:									// Root is dealt with above. Should NEVER get to here.
 				case fileType	:									// Preceding a '/' must not be a file type.
 				case noType		:									// And noType means the path did not exist.
-					Serial.println("noType error!");			// For now we send an error out.
 					fail = true;									// We'll call this a fail.
 				break;												// And we're done.
 			}															//
@@ -547,14 +540,12 @@ void filePath::refreshChildList(void) {
 									}																//
 								} else {															// Else, it seems we've run out of RAM..
 									done = true;												// We're done with this.
-									Serial.println("path's newItem RAM fail!!");
 									dumpChildList();											// Our world is crumbling. Clear out the child list.
 								}																	//
 							}																		//
 							entry.close();                								// And we close the entry.	
 						} else {																	// Entry had a NULL name?!?
 							done = true;														// Well at this point we'll give up.
-							Serial.println("entry.name() = NULL!!!");
 							dumpChildList();													// Again, our world is crumbling. Clear out the child list.
 						}																			//
 					} else {                            								// Else, we didn't get an entry from above.
