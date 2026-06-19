@@ -625,6 +625,7 @@ bool filePath::pushChildItemByName(const char* name) {
 	pathItem*	newItem;
 	bool			success;
 	
+	if (!name) return false;									// No name? Not a success.
 	success = false;												// Not a success yet.
 	theChild = getChildItemByName(theName.getStr());	// Try grabbing a child by this name.
 	newItem = NULL;												// We start newItem at NULL.
